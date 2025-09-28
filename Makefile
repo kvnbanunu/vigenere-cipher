@@ -12,8 +12,13 @@ PORT = 9876
 SERVER_ARGS = $(IP) $(PORT)
 CLIENT_ARGS = $(MESSAGE) $(KEY) $(IP) $(PORT)
 COPY_CONFIG = cp config.json bin/
+COPY_TESTING = cp testing/Makefile bin/
 
-build-all: clean-all build-s build-c
+build-all: clean-all
+	@$(BUILD) $(SERVER_TARGET) $(SERVER)
+	@$(BUILD) $(CLIENT_TARGET) $(CLIENT)
+	@$(COPY_CONFIG)
+	@$(COPY_TESTING)
 
 build-s: clean-s
 	@$(BUILD) $(SERVER_TARGET) $(SERVER)

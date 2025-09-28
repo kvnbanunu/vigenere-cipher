@@ -33,6 +33,8 @@ func (a *Addr) ServerSetup() (*net.TCPListener, error) {
 		return nil, err
 	}
 
+	fmt.Println("Now listening on ", addrStr)
+
 	return fd, nil
 }
 
