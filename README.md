@@ -2,6 +2,12 @@
 
 This is a client-server application that uses network sockets for communication.
 
+The client can send a message along with a key to the server.
+
+The server then responds with the Vigenere cipher applied to the message.
+
+Case is kept and special characters are ignored
+
 ---
 
 ## Setup
@@ -29,19 +35,24 @@ cp config.json bin/
 ## Run
 1. Start Server
 ```sh
-./bin/server -p <path to sockfile>
+./bin/server <host ip> <port>
 ```
 2. Send request with Client
 ```sh
-./bin/client -p <path to sockfile> -i <message content> -s <shift value>
+./bin/client <message> <key> <host ip> <port>
 ```
-Both programs can be run with a -d flag to display debug statements
+Both programs can be run with a -h flag to display a help message
+
+Both programs can also be run without arguments with the following config file
 
 ---
 
 ## Config
 config.json includes two fields that can be changed (You do not need to rebuild)
 
-- BufferSize sets the size of the buffer for read/write
+- bufferSize sets the size of the buffer for read/write
+- content sets the default message
+- key sets the default encryption key
+- ip sets the default host ip address
+- port sets the default port
 
-- CipherLimit sets the loop threshold for the caesar cipher (Set to 26 for the full alphabet)
