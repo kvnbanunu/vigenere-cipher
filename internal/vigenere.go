@@ -12,15 +12,41 @@ type Msg struct {
 }
 
 func cipher(c rune, shift rune) string {
-	if c > 'a' && c < 'z' {
-		c += shift % 32
-	} else {
+	shift %= 32 // converts ascii value to position in alphabet
 
+	if c > 'a' && c < 'z' {
+		if shift > 'z' - c {
+			c += shift - 26
+		} else {
+			c += shift
+		}
+	} else {
+		if shift > 'Z' - c {
+			c += shift - 26
+		} else {
+			c += shift
+		}
 	}
+	return string(c)
 }
 
 func decipher(c rune, shift rune) string {
+	shift %= 32 // converts ascii value to position in alphabet
 
+	if c > 'a' && c < 'z' {
+		if shift > c - 'a' {
+			c -= shift - 26
+		} else {
+			c -= shift
+		}
+	} else {
+		if shift > c - 'A' {
+			c -= shift - 26
+		} else {
+			c -= shift
+		}
+	}
+	return string(c)
 }
 
 func Process(m Msg, task string) string {

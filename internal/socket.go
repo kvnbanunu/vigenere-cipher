@@ -89,7 +89,7 @@ func HandleConnection(conn *net.TCPConn, bufferSize int) error {
 	fmt.Printf("Received Message:\n\t%-10s %s\n\t%-10s %s\n", "Content:", msg.Content, "Key:", msg.Key)
 
 	// apply cipher
-	msg.Content = Process(msg.Content)
+	msg.Content = Process(msg, "cipher")
 
 	fmt.Println("Sending Encrypted Message:", msg.Content)
 
@@ -145,7 +145,7 @@ func Request(conn *net.TCPConn, bufferSize int, msg Msg) error {
 
 	fmt.Printf("Encrypted Response:\n\t%-10s %s\n\t%-10s %s\n", "Content:", response.Content, "Key:", response.Key)
 
-	decoded := Process(response.Content)
+	decoded := Process(response, "decipher")
 
 	fmt.Println("Decrypted Message:", decoded)
 
