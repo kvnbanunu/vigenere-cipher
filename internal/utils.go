@@ -1,4 +1,4 @@
-package utils
+package internal
 
 import (
 	"encoding/json"
@@ -8,8 +8,6 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
-
-	"vigenere-cipher/internal/socket"
 )
 
 // Holds settings for defaults
@@ -19,12 +17,6 @@ type Config struct {
 	Key        string `json:"key"`
 	IP         string `json:"ip"`
 	Port       string `json:"port"`
-}
-
-// Holds the message to be ciphered/deciphered w/ key
-type Msg struct {
-	Content string `json:"content"`
-	Key     string `json:"key"`
 }
 
 // Read contents of "config.json" and store in Config struct
@@ -44,21 +36,21 @@ func LoadConfig() (*Config, error) {
 }
 
 // Parse command line args for server
-func ServerParseArgs(cfg *Config) *socket.Addr {
+func ServerParseArgs(cfg *Config) *Addr {
 	args := os.Args
 
 	if len(args) > 3 { // Program name, IP, Port
 		serverUsage(args[0], "Too many arguments.")
 	}
 
-	var addr socket.Addr
+	var addr Addr
 	cfg.serverHandleArgs(args, &addr)
 
 	return &addr
 }
 
 // Parse command line args for client
-func ClientParseArgs(cfg *Config) (*Msg, *socket.Addr) {
+func ClientParseArgs(cfg *Config) (*Msg, *Addr) {
 	args := os.Args
 
 	if len(args) > 5 { // Program name, msg, key, IP, Port
@@ -66,14 +58,14 @@ func ClientParseArgs(cfg *Config) (*Msg, *socket.Addr) {
 	}
 
 	var msg Msg
-	var addr socket.Addr
+	var addr Addr
 	cfg.clientHandleArgs(args, &msg, &addr)
 
 	return &msg, &addr
 }
 
 // Checks args for IP address and port, designed to be in any order
-func (cfg *Config) serverHandleArgs(args []string, addr *socket.Addr) {
+func (cfg *Config) serverHandleArgs(args []string, addr *Addr) {
 	numArgs := len(args)
 	hasIP := false
 	hasPort := false
@@ -117,7 +109,7 @@ func (cfg *Config) serverHandleArgs(args []string, addr *socket.Addr) {
 }
 
 // Check for valid args, strict order
-func (cfg *Config) clientHandleArgs(args []string, msg *Msg, addr *socket.Addr) {
+func (cfg *Config) clientHandleArgs(args []string, msg *Msg, addr *Addr) {
 	numArgs := len(args)
 
 	// insert defaults

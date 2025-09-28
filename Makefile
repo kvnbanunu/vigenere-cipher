@@ -7,7 +7,7 @@ RUN = go run
 HELP = -h
 MESSAGE = Hello
 KEY = 3
-IP = 10.0.0.210
+IP = 192.168.81.82
 PORT = 8080
 SERVER_ARGS = $(IP) $(PORT)
 CLIENT_ARGS = $(MESSAGE) $(KEY) $(IP) $(PORT)
@@ -27,7 +27,7 @@ run-s:
 	@$(RUN) $(SERVER)
 
 run-c:
-	@$(RUN) $(CLIENT) $(CLIENT_ARGS)
+	@$(RUN) $(CLIENT)
 
 help-s:
 	@$(RUN) $(SERVER) $(HELP)
