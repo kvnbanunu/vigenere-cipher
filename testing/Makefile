@@ -1,5 +1,7 @@
 MSG = 'Hello, World!'
+MSG2 = 'attacking tonight'
 KEY = PASSWORD
+KEY2 = oculorhinolaryngology
 IP = 127.0.0.1
 PORT = 9876
 
@@ -62,7 +64,10 @@ t11: clear
 
 t12: clear
 	@echo "Test 12: Client w/ standard args MSG KEY IP PORT"
+	@echo "Set 1"
 	./client $(MSG) $(KEY) $(IP) $(PORT)
+	@echo "Set 2"
+	./client $(MSG2) $(KEY2) $(IP) $(PORT)
 
 t13: clear
 	@echo "Test 13: Client w/ not enough args"

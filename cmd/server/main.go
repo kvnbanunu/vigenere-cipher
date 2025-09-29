@@ -14,7 +14,7 @@ func main() {
 	}
 
 	addr := internal.ServerParseArgs(cfg)
-	
+
 	fd, err := addr.ServerSetup()
 	if err != nil {
 		log.Fatalln("Error setting up Server:", err)

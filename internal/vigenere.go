@@ -13,15 +13,16 @@ type Msg struct {
 
 func cipher(c rune, shift rune) string {
 	shift %= 32 // converts ascii value to position in alphabet
+	shift--     // shift is zero indexed
 
-	if c > 'a' && c < 'z' {
-		if shift > 'z' - c {
+	if c >= 'a' && c <= 'z' {
+		if shift > 'z'-c {
 			c += shift - 26
 		} else {
 			c += shift
 		}
 	} else {
-		if shift > 'Z' - c {
+		if shift > 'Z'-c {
 			c += shift - 26
 		} else {
 			c += shift
@@ -32,15 +33,16 @@ func cipher(c rune, shift rune) string {
 
 func decipher(c rune, shift rune) string {
 	shift %= 32 // converts ascii value to position in alphabet
+	shift--     // shift is zero indexed
 
-	if c > 'a' && c < 'z' {
-		if shift > c - 'a' {
+	if c >= 'a' && c <= 'z' {
+		if shift > c-'a' {
 			c -= shift - 26
 		} else {
 			c -= shift
 		}
 	} else {
-		if shift > c - 'A' {
+		if shift > c-'A' {
 			c -= shift - 26
 		} else {
 			c -= shift
@@ -50,7 +52,6 @@ func decipher(c rune, shift rune) string {
 }
 
 func Process(m Msg, task string) string {
-
 	// Keep appending the key to itself until it is at least the length of the content
 	for len(m.Key) < len(m.Content) {
 		m.Key += m.Key
@@ -59,7 +60,7 @@ func Process(m Msg, task string) string {
 	keyIndex := 0
 	output := ""
 
-	for _, c := range(m.Content) {
+	for _, c := range m.Content {
 		if !unicode.IsLetter(c) {
 			output += string(c)
 			continue
