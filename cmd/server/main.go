@@ -26,7 +26,7 @@ func main() {
 
 	internal.HandleSignal(fd, &f)
 
-	for {
+	for !f.Exit {
 		conn, err := fd.AcceptTCP()
 		if err != nil {
 			if f.Exit {
