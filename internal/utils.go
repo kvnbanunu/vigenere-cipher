@@ -266,7 +266,7 @@ func clientUsage(prog_name string, msg string) {
 Usage: %s [-h] <msg> <key> <ip address> <port>
 Options:
 	-h           Display this help message
-	<msg>        Message string to send cipher
+	<msg>        Message string to send
 	<key>        Encryption key (Must be string of only letters)
 	<ip address> IPv4 or IPv6 address of host
 	<port>       Port to listen on
