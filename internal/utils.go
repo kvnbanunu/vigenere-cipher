@@ -250,7 +250,7 @@ Usage: %s [-h] <ip address> <port>
 Options:
 	-h           Display this help message
 	<ip address> IPv4 or IPv6 address of host
-	<port>       port to listen on
+	<port>       Port to listen on
 `
 
 	fmt.Printf(str, prog_name)
@@ -269,7 +269,7 @@ Options:
 	<msg>        Message string to send cipher
 	<key>        Encryption key (Must be string of only letters)
 	<ip address> IPv4 or IPv6 address of host
-	<port>       port to listen on
+	<port>       Port to listen on
 `
 
 	fmt.Printf(str, prog_name)
