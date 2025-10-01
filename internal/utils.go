@@ -75,7 +75,6 @@ func ClientParseArgs(cfg *Config) (*Msg, *Addr) {
 // Checks args for IP address and port, designed to be in any order
 func (cfg *Config) serverHandleArgs(args []string, addr *Addr) {
 	numArgs := len(args)
-	numSet := 0
 	hasIP := false
 	hasPort := false
 
@@ -86,7 +85,6 @@ func (cfg *Config) serverHandleArgs(args []string, addr *Addr) {
 		if !hasIP && isIP {
 			addr.IP = args[i]
 			hasIP = true
-			numSet++
 			continue
 		} else if hasIP && isIP {
 			// included more than 1 ip address
@@ -98,7 +96,6 @@ func (cfg *Config) serverHandleArgs(args []string, addr *Addr) {
 		if !hasPort && isPort {
 			addr.Port = args[i]
 			hasPort = true
-			numSet++
 			continue
 		} else if hasPort && isPort {
 			serverUsage(args[0], "Inputted too many Ports")
