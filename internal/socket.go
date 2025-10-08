@@ -10,8 +10,17 @@ import (
 	"syscall"
 )
 
+type IPType int
+
+const (
+	IPv4  IPType = 4
+	IPv6  IPType = 6
+	BadIP IPType = -1
+)
+
 // Holds network socket settings
 type Addr struct {
+	Type IPType `json:"type"`
 	IP   string `json:"ip"`
 	Port string `json:"port"`
 }

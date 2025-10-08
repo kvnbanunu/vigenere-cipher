@@ -16,6 +16,7 @@ type Config struct {
 	BufferSize int    `json:"bufferSize"`
 	Content    string `json:"content"`
 	Key        string `json:"key"`
+	Type       IPType `json:"ipType"`
 	IP         string `json:"ip"`
 	Port       string `json:"port"`
 }
@@ -85,44 +86,28 @@ func ClientParseArgs(cfg *Config) (*Msg, *Addr) {
 
 // Checks args for IP address and port, designed to be in any order
 func (cfg *Config) serverHandleArgs(prog string, args []string, addr *Addr) {
-	numArgs := len(args)
-	hasIP := false
-	hasPort := false
+	// insert defaults
+	addr.Type = cfg.Type
+	addr.IP = cfg.IP
+	addr.Port = cfg.Port
 
-	// loop over args, but skip prog_name
-	for i := range numArgs {
-		isIP := checkIP(args[i])
-
-		if !hasIP && isIP {
-			addr.IP = args[i]
-			hasIP = true
-			continue
-		} else if hasIP && isIP {
-			// included more than 1 ip address
-			serverUsage(prog, "Inputted too many IP addresses")
+	for i, val := range args {
+		switch i {
+		case 0:
+			ipType := checkIP(val)
+			if ipType == BadIP {
+				serverUsage(prog, fmt.Sprintf("Invalid IP Address: %s", val))
+			}
+			addr.Type = ipType
+			addr.IP = val
+		case 1:
+			if !checkPort(val) {
+				serverUsage(prog, fmt.Sprintf("Invalid Port: %s", val))
+			}
+			addr.Port = val
+		default:
+			serverUsage(prog, "Too many arguments")
 		}
-
-		isPort := checkPort(args[i])
-
-		if !hasPort && isPort {
-			addr.Port = args[i]
-			hasPort = true
-			continue
-		} else if hasPort && isPort {
-			serverUsage(prog, "Inputted too many Ports")
-		}
-
-		// if the arg is neither an address or port
-		serverUsage(prog, fmt.Sprintf("Invalid argument: %s", args[i]))
-	}
-
-	// Insert defaults if empty
-	if !hasIP {
-		addr.IP = cfg.IP
-	}
-
-	if !hasPort {
-		addr.Port = cfg.Port
 	}
 }
 
@@ -131,6 +116,7 @@ func (cfg *Config) clientHandleArgs(prog string, args []string, msg *Msg, addr *
 	// insert defaults
 	msg.Content = cfg.Content
 	msg.Key = cfg.Key
+	addr.Type = cfg.Type
 	addr.IP = cfg.IP
 	addr.Port = cfg.Port
 
@@ -145,17 +131,17 @@ func (cfg *Config) clientHandleArgs(prog string, args []string, msg *Msg, addr *
 				clientUsage(prog, fmt.Sprintf("Invalid Key: %s", val))
 			}
 		case 2:
-			if checkIP(val) {
-				addr.IP = val
-			} else {
+			ipType := checkIP(val)
+			if ipType == BadIP {
 				clientUsage(prog, fmt.Sprintf("Invalid IP Address: %s", val))
 			}
+			addr.Type = ipType
+			addr.IP = val
 		case 3:
-			if checkPort(val) {
-				addr.Port = val
-			} else {
+			if !checkPort(val) {
 				clientUsage(prog, fmt.Sprintf("Invalid Port: %s", val))
 			}
+			addr.Port = val
 		default:
 			clientUsage(prog, "Too many arguments")
 		}
@@ -173,7 +159,7 @@ func checkKey(str string) bool {
 }
 
 // Checks if the IP is a valid IP4 or IP6 address
-func checkIP(str string) bool {
+func checkIP(str string) IPType {
 	ip := strings.Split(str, ".")
 
 	// if '.' exists in str then there should be more than 1 element
@@ -181,19 +167,19 @@ func checkIP(str string) bool {
 	if len(ip) == 4 {
 		for _, segment := range ip {
 			if len(segment) > 3 {
-				return false
+				return BadIP
 			}
 
 			num, err := strconv.Atoi(segment)
 			if err != nil {
-				return false
+				return BadIP
 			}
 
 			if num > 255 {
-				return false
+				return BadIP
 			}
 		}
-		return true
+		return IPv4
 	} else {
 		ip6 := strings.Split(str, ":")
 		if len(ip6) >= 3 { // shortest representation is "::" is still 3 elements
@@ -203,23 +189,23 @@ func checkIP(str string) bool {
 				}
 
 				if len(segment) > 4 { // each segment has a max length of 4 hex digits
-					return false
+					return BadIP
 				}
 
 				num, err := strconv.ParseUint(segment, 16, 64)
 				if err != nil {
-					return false
+					return BadIP
 				}
 
 				if num > 65535 { // max int value for FFFF
-					return false
+					return BadIP
 				}
 			}
-			return true
+			return IPv6
 		}
 	}
 
-	return false
+	return BadIP
 }
 
 // Checks if the port is valid
@@ -241,8 +227,7 @@ func serverUsage(prog_name string, msg string) {
 		log.Println(msg)
 	}
 
-	str := `
-Usage: %s [-h] <ip address> <port>
+	str := `Usage: %s [-h] <ip address> <port>
 Options:
 	-h           Display this help message
 	<ip address> IPv4 or IPv6 address of host
@@ -258,8 +243,7 @@ func clientUsage(prog_name string, msg string) {
 		log.Println(msg)
 	}
 
-	str := `
-Usage: %s [-h] <msg> <key> <ip address> <port>
+	str := `Usage: %s [-h] <msg> <key> <ip address> <port>
 Options:
 	-h           Display this help message
 	<msg>        Message string to send

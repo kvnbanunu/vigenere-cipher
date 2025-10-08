@@ -1,7 +1,8 @@
 {
-    "bufferSize": 1024,
-    "content": "Hello, World!",
-    "key": "PASSWORD",
-    "ip": "127.0.0.1",
-    "port": "9876"
+  "bufferSize": 1024,
+  "content": "Hello, World!",
+  "key": "PASSWORD",
+  "type": 4,
+  "ip": "127.0.0.1",
+  "port": "9876"
 }
