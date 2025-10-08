@@ -14,37 +14,22 @@ CLIENT_ARGS = $(MESSAGE) $(KEY) $(IP) $(PORT)
 COPY_CONFIG = cp config.json bin/
 COPY_TESTING = cp testing/Makefile bin/
 
-build-all: clean-all
-	@$(BUILD) $(SERVER_TARGET) $(SERVER)
-	@$(BUILD) $(CLIENT_TARGET) $(CLIENT)
-	@$(COPY_CONFIG)
+all: clean buildserver buildclient
 	@$(COPY_TESTING)
 
-build-s: clean-s
+buildserver:
 	@$(BUILD) $(SERVER_TARGET) $(SERVER)
 	@$(COPY_CONFIG)
 
-build-c: clean-c
+buildclient:
 	@$(BUILD) $(CLIENT_TARGET) $(CLIENT)
 	@$(COPY_CONFIG)
 
-run-s:
+runserver:
 	@$(RUN) $(SERVER) $(SERVER_ARGS)
 
-run-c:
+runclient:
 	@$(RUN) $(CLIENT) $(CLIENT_ARGS)
 
-help-s:
-	@$(RUN) $(SERVER) $(HELP)
-
-help-c:
-	@$(RUN) $(CLIENT) $(HELP)
-
-clean-s:
-	@rm -f $(SERVER_TARGET)
-
-clean-c:
-	@rm -f $(CLIENT_TARGET)
-
-clean-all:
+clean:
 	@rm -rf bin
