@@ -77,74 +77,38 @@ func HandleConnection(conn *net.TCPConn, bufferSize int) {
 
 	fmt.Println("\nConnection Accepted.")
 
-	buf := make([]byte, bufferSize)
-	n, err := conn.Read(buf)
+	req, err := sock_read(conn, bufferSize)
 	if err != nil {
-		fmt.Println("Error read:", err)
+		fmt.Println("Error reading from socket:",err)
 		return
 	}
 
-	var msg utils.Payload
-	err = json.Unmarshal(buf[:n], &msg)
-	if err != nil {
-		fmt.Println("Error deserializing data:", err)
-		return
-	}
-
-	fmt.Printf("Received Payload:\n\t%-10s %s\n\t%-10s %s\n", "Message:", msg.Message, "Key:", msg.Key)
+	fmt.Printf("Received Payload:\n\t%-10s %s\n\t%-10s %s\n", "Message:", req.Message, "Key:", req.Key)
 
 	// apply cipher
-	msg.Message = vigenere.Process(msg.Message, msg.Key, vigenere.Cipher)
+	encrypted := vigenere.Process(req.Message, req.Key, vigenere.Cipher)
 
-	fmt.Println("Sending Encrypted Message:", msg.Message)
+	fmt.Println("Sending Encrypted Message:", encrypted)
 
-	response, err := json.Marshal(msg)
-	if err != nil {
-		fmt.Println("Error serializing data:", err)
-		return
-	}
-
-	n, err = conn.Write(response)
-	if err != nil {
-		fmt.Println("Error write:", err)
-		return
-	}
-
-	if n != len(response) {
-		fmt.Printf("Error Bytes Written: %d does not match length of message: %d\n", n, len(response))
+	res := utils.Payload{Message: encrypted, Key: req.Key}
+	if err := sock_write(conn, &res); err != nil {
+		fmt.Println("Error writing to socket:",err)
 		return
 	}
 
 	fmt.Println("Connection Closed.")
 }
 
-func Request(conn *net.TCPConn, bufferSize int, msg utils.Payload) error {
+func Request(conn *net.TCPConn, bufferSize int, req utils.Payload) error {
 	defer conn.Close()
 
-	encoded, err := json.Marshal(msg)
-	if err != nil {
+	fmt.Printf("Sending Request:\n\t%-10s %s\n\t%-10s %s\n", "Message:", req.Message, "Key:", req.Key)
+
+	if err := sock_write(conn, &req); err != nil {
 		return err
 	}
-
-	fmt.Printf("Sending Request:\n\t%-10s %s\n\t%-10s %s\n", "Message:", msg.Message, "Key:", msg.Key)
-
-	n, err := conn.Write(encoded)
-	if err != nil {
-		return err
-	}
-
-	if n != len(encoded) {
-		return fmt.Errorf("Bytes Written: %d does not match length of message: %d\n", n, len(encoded))
-	}
-
-	buf := make([]byte, bufferSize)
-	n, err = conn.Read(buf)
-	if err != nil {
-		return err
-	}
-
-	var response utils.Payload
-	err = json.Unmarshal(buf[:n], &response)
+	
+	response, err := sock_read(conn, bufferSize)
 	if err != nil {
 		return err
 	}
@@ -154,6 +118,39 @@ func Request(conn *net.TCPConn, bufferSize int, msg utils.Payload) error {
 	decoded := vigenere.Process(response.Message, response.Key, vigenere.Decipher)
 
 	fmt.Println("Decrypted Message:", decoded)
+
+	return nil
+}
+
+func sock_read(conn *net.TCPConn, bufferSize int) (*utils.Payload, error) {
+	buf := make([]byte, bufferSize)
+	n, err := conn.Read(buf)
+	if err != nil {
+		return nil, fmt.Errorf("Error read: %w:", err)
+	}
+
+	var msg utils.Payload
+	err = json.Unmarshal(buf[:n], &msg)
+	if err != nil {
+		return nil, fmt.Errorf("Error deserializing data: %w", err)
+	}
+	return &msg, nil
+}
+
+func sock_write(conn *net.TCPConn, payload *utils.Payload) error {
+	response, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("Error serializing data: %w", err)
+	}
+
+	n, err := conn.Write(response)
+	if err != nil {
+		return fmt.Errorf("Error write: %w", err)
+	}
+
+	if n != len(response) {
+		return fmt.Errorf("Error Bytes Written: %d does not match length of message: %d\n", n, len(response))
+	}
 
 	return nil
 }
