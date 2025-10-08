@@ -8,6 +8,8 @@ The server then responds with the Vigenere cipher applied to the message.
 
 Case is kept and special characters are ignored
 
+An implementation using epoll instead of goroutines can be found in the epoll branch.
+
 ---
 
 ## Setup

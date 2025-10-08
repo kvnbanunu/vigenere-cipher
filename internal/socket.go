@@ -80,7 +80,7 @@ func HandleSignal(fd *net.TCPListener, f *Flag) {
 	}()
 }
 
-func HandleConnection(conn *net.TCPConn, bufferSize int) error {
+func HandleConnection(conn *net.TCPConn, bufferSize int) {
 	defer conn.Close()
 
 	fmt.Println("Connection Accepted.")
@@ -88,13 +88,15 @@ func HandleConnection(conn *net.TCPConn, bufferSize int) error {
 	buf := make([]byte, bufferSize)
 	n, err := conn.Read(buf)
 	if err != nil {
-		return err
+		fmt.Println("Error read:", err)
+		return
 	}
 
 	var msg Msg
 	err = json.Unmarshal(buf[:n], &msg)
 	if err != nil {
-		return err
+		fmt.Println("Error deserializing data:", err)
+		return
 	}
 
 	fmt.Printf("Received Message:\n\t%-10s %s\n\t%-10s %s\n", "Content:", msg.Content, "Key:", msg.Key)
@@ -106,21 +108,22 @@ func HandleConnection(conn *net.TCPConn, bufferSize int) error {
 
 	response, err := json.Marshal(msg)
 	if err != nil {
-		return err
+		fmt.Println("Error serializing data:", err)
+		return
 	}
 
 	n, err = conn.Write(response)
 	if err != nil {
-		return err
+		fmt.Println("Error write:", err)
+		return
 	}
 
 	if n != len(response) {
-		return fmt.Errorf("Bytes Written: %d does not match length of message: %d\n", n, len(response))
+		fmt.Printf("Error Bytes Written: %d does not match length of message: %d\n", n, len(response))
+		return
 	}
 
 	fmt.Println("Connection Closed.")
-
-	return nil
 }
 
 func Request(conn *net.TCPConn, bufferSize int, msg Msg) error {

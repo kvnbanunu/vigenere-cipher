@@ -37,10 +37,6 @@ func main() {
 			log.Println("Error accepting connection:", err)
 			break
 		}
-		err = internal.HandleConnection(conn, cfg.BufferSize)
-		if err != nil {
-			log.Println("Error handling connection:", err)
-			break
-		}
+		go internal.HandleConnection(conn, cfg.BufferSize)
 	}
 }
