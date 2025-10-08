@@ -2,6 +2,7 @@ package internal
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -37,49 +38,59 @@ func LoadConfig() (*Config, error) {
 
 // Parse command line args for server
 func ServerParseArgs(cfg *Config) *Addr {
-	args := os.Args
+	prog := os.Args[0] // program name
 
-	if len(args) > 3 { // Program name, IP, Port
-		serverUsage(args[0], "Too many arguments.")
+	var help bool
+	flag.BoolVar(&help, "h", false, "Prints a help message")
+	flag.Parse()
+	args := flag.Args()
+
+	if help {
+		serverUsage(prog, "")
 	}
 
-	if len(args) > 1 && args[1] == "-h" {
-		serverUsage(args[0], "")
+	if len(args) > 3 { // Program name, IP, Port
+		serverUsage(prog, "Too many arguments.")
 	}
 
 	var addr Addr
-	cfg.serverHandleArgs(args, &addr)
+	cfg.serverHandleArgs(prog, args, &addr)
 
 	return &addr
 }
 
 // Parse command line args for client
 func ClientParseArgs(cfg *Config) (*Msg, *Addr) {
-	args := os.Args
+	prog := os.Args[0]
 
-	if len(args) > 5 { // Program name, msg, key, IP, Port
-		clientUsage(args[0], "Too many arguments.")
+	var help bool
+	flag.BoolVar(&help, "h", false, "Prints a help message")
+	flag.Parse()
+	args := flag.Args()
+
+	if help {
+		clientUsage(prog, "")
 	}
 
-	if len(args) > 1 && args[1] == "-h" {
-		clientUsage(args[0], "")
+	if len(args) > 5 { // Program name, msg, key, IP, Port
+		clientUsage(prog, "Too many arguments.")
 	}
 
 	var msg Msg
 	var addr Addr
-	cfg.clientHandleArgs(args, &msg, &addr)
+	cfg.clientHandleArgs(prog, args, &msg, &addr)
 
 	return &msg, &addr
 }
 
 // Checks args for IP address and port, designed to be in any order
-func (cfg *Config) serverHandleArgs(args []string, addr *Addr) {
+func (cfg *Config) serverHandleArgs(prog string, args []string, addr *Addr) {
 	numArgs := len(args)
 	hasIP := false
 	hasPort := false
 
 	// loop over args, but skip prog_name
-	for i := 1; i < numArgs; i++ {
+	for i := range numArgs {
 		isIP := checkIP(args[i])
 
 		if !hasIP && isIP {
@@ -88,7 +99,7 @@ func (cfg *Config) serverHandleArgs(args []string, addr *Addr) {
 			continue
 		} else if hasIP && isIP {
 			// included more than 1 ip address
-			serverUsage(args[0], "Inputted too many IP addresses")
+			serverUsage(prog, "Inputted too many IP addresses")
 		}
 
 		isPort := checkPort(args[i])
@@ -98,11 +109,11 @@ func (cfg *Config) serverHandleArgs(args []string, addr *Addr) {
 			hasPort = true
 			continue
 		} else if hasPort && isPort {
-			serverUsage(args[0], "Inputted too many Ports")
+			serverUsage(prog, "Inputted too many Ports")
 		}
 
 		// if the arg is neither an address or port
-		serverUsage(args[0], fmt.Sprintf("Invalid argument: %s", args[i]))
+		serverUsage(prog, fmt.Sprintf("Invalid argument: %s", args[i]))
 	}
 
 	// Insert defaults if empty
@@ -116,53 +127,38 @@ func (cfg *Config) serverHandleArgs(args []string, addr *Addr) {
 }
 
 // Check for valid args, strict order
-func (cfg *Config) clientHandleArgs(args []string, msg *Msg, addr *Addr) {
-	numArgs := len(args)
-
+func (cfg *Config) clientHandleArgs(prog string, args []string, msg *Msg, addr *Addr) {
 	// insert defaults
 	msg.Content = cfg.Content
 	msg.Key = cfg.Key
 	addr.IP = cfg.IP
 	addr.Port = cfg.Port
 
-	// if no args past prog_name
-	if numArgs == 1 {
-		return
-	}
-
-	msg.Content = args[1]
-
-	if numArgs == 2 {
-		return
-	}
-
-	key := args[2]
-	if checkKey(key) {
-		msg.Key = key
-	} else {
-		clientUsage(args[0], fmt.Sprintf("Invalid Key: %s", key))
-	}
-
-	if numArgs == 3 {
-		return
-	}
-
-	ip := args[3]
-	if checkIP(ip) {
-		addr.IP = ip
-	} else {
-		clientUsage(args[0], fmt.Sprintf("Invalid IP Address: %s", ip))
-	}
-
-	if numArgs == 4 {
-		return
-	}
-
-	port := args[4]
-	if checkPort(port) {
-		addr.Port = port
-	} else {
-		clientUsage(args[0], fmt.Sprintf("Invalid Port: %s", port))
+	for i, val := range args {
+		switch i {
+		case 0:
+			msg.Content = val
+		case 1:
+			if checkKey(val) {
+				msg.Key = val
+			} else {
+				clientUsage(prog, fmt.Sprintf("Invalid Key: %s", val))
+			}
+		case 2:
+			if checkIP(val) {
+				addr.IP = val
+			} else {
+				clientUsage(prog, fmt.Sprintf("Invalid IP Address: %s", val))
+			}
+		case 3:
+			if checkPort(val) {
+				addr.Port = val
+			} else {
+				clientUsage(prog, fmt.Sprintf("Invalid Port: %s", val))
+			}
+		default:
+			clientUsage(prog, "Too many arguments")
+		}
 	}
 }
 
