@@ -1,6 +1,6 @@
 {
   "bufferSize": 1024,
-  "content": "Hello, World!",
+  "message": "Hello, World!",
   "key": "PASSWORD",
   "type": 4,
   "ip": "127.0.0.1",

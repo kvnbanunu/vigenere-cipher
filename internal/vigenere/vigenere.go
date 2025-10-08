@@ -1,15 +1,16 @@
-package internal
+package vigenere
 
 import (
 	"log"
 	"unicode"
 )
 
-// Holds the message to be ciphered/deciphered w/ key
-type Msg struct {
-	Content string `json:"content"`
-	Key     string `json:"key"`
-}
+type VigenereTask int
+
+const (
+	Cipher VigenereTask = iota
+	Decipher
+)
 
 func cipher(c rune, shift rune) string {
 	shift %= 32 // converts ascii value to position in alphabet
@@ -51,28 +52,28 @@ func decipher(c rune, shift rune) string {
 	return string(c)
 }
 
-func Process(m Msg, task string) string {
+func Process(msg, key string, task VigenereTask) string {
 	// Keep appending the key to itself until it is at least the length of the content
-	for len(m.Key) < len(m.Content) {
-		m.Key += m.Key
+	for len(key) < len(msg) {
+		key += key
 	}
 
 	keyIndex := 0
 	output := ""
 
-	for _, c := range m.Content {
+	for _, c := range msg {
 		if !unicode.IsLetter(c) {
 			output += string(c)
 			continue
 		}
-		shift := rune(m.Key[keyIndex])
+		shift := rune(key[keyIndex])
 		switch task {
-		case "cipher":
+		case Cipher:
 			output += cipher(c, shift)
-		case "decipher":
+		case Decipher:
 			output += decipher(c, shift)
 		default: // should never reach here
-			log.Fatalf("Invalid task: %s", task)
+			log.Fatalf("Invalid task: %v", task)
 		}
 		keyIndex++
 	}

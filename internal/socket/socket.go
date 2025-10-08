@@ -1,4 +1,4 @@
-package internal
+package socket
 
 import (
 	"encoding/json"
@@ -8,29 +8,21 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
+	"vigenere-cipher/internal/utils"
+	"vigenere-cipher/internal/vigenere"
 )
 
-type IPType int
-
-const (
-	IPv4  IPType = 4
-	IPv6  IPType = 6
-	BadIP IPType = -1
-)
-
-// Holds network socket settings
-type Addr struct {
-	Type IPType `json:"type"`
-	IP   string `json:"ip"`
-	Port string `json:"port"`
+type SockAddr struct {
+	Addr *utils.Addr
 }
 
 type Flag struct {
 	Exit bool
 }
 
-func (a *Addr) ServerSetup() (*net.TCPListener, error) {
-	addrStr := a.IP + ":" + a.Port
+func (a *SockAddr) ServerSetup() (*net.TCPListener, error) {
+	addrStr := a.Addr.IP + ":" + a.Addr.Port
 
 	addr, err := net.ResolveTCPAddr("tcp", addrStr)
 	if err != nil {
@@ -47,8 +39,8 @@ func (a *Addr) ServerSetup() (*net.TCPListener, error) {
 	return fd, nil
 }
 
-func (a *Addr) ClientSetup() (*net.TCPConn, error) {
-	addrStr := a.IP + ":" + a.Port
+func (a *SockAddr) ClientSetup() (*net.TCPConn, error) {
+	addrStr := a.Addr.IP + ":" + a.Addr.Port
 
 	addr, err := net.ResolveTCPAddr("tcp", addrStr)
 	if err != nil {
@@ -83,7 +75,7 @@ func HandleSignal(fd *net.TCPListener, f *Flag) {
 func HandleConnection(conn *net.TCPConn, bufferSize int) {
 	defer conn.Close()
 
-	fmt.Println("Connection Accepted.")
+	fmt.Println("\nConnection Accepted.")
 
 	buf := make([]byte, bufferSize)
 	n, err := conn.Read(buf)
@@ -92,19 +84,19 @@ func HandleConnection(conn *net.TCPConn, bufferSize int) {
 		return
 	}
 
-	var msg Msg
+	var msg utils.Payload
 	err = json.Unmarshal(buf[:n], &msg)
 	if err != nil {
 		fmt.Println("Error deserializing data:", err)
 		return
 	}
 
-	fmt.Printf("Received Message:\n\t%-10s %s\n\t%-10s %s\n", "Content:", msg.Content, "Key:", msg.Key)
+	fmt.Printf("Received Payload:\n\t%-10s %s\n\t%-10s %s\n", "Message:", msg.Message, "Key:", msg.Key)
 
 	// apply cipher
-	msg.Content = Process(msg, "cipher")
+	msg.Message = vigenere.Process(msg.Message, msg.Key, vigenere.Cipher)
 
-	fmt.Println("Sending Encrypted Message:", msg.Content)
+	fmt.Println("Sending Encrypted Message:", msg.Message)
 
 	response, err := json.Marshal(msg)
 	if err != nil {
@@ -126,7 +118,7 @@ func HandleConnection(conn *net.TCPConn, bufferSize int) {
 	fmt.Println("Connection Closed.")
 }
 
-func Request(conn *net.TCPConn, bufferSize int, msg Msg) error {
+func Request(conn *net.TCPConn, bufferSize int, msg utils.Payload) error {
 	defer conn.Close()
 
 	encoded, err := json.Marshal(msg)
@@ -134,7 +126,7 @@ func Request(conn *net.TCPConn, bufferSize int, msg Msg) error {
 		return err
 	}
 
-	fmt.Printf("Sending Request:\n\t%-10s %s\n\t%-10s %s\n", "Content:", msg.Content, "Key:", msg.Key)
+	fmt.Printf("Sending Request:\n\t%-10s %s\n\t%-10s %s\n", "Message:", msg.Message, "Key:", msg.Key)
 
 	n, err := conn.Write(encoded)
 	if err != nil {
@@ -151,15 +143,15 @@ func Request(conn *net.TCPConn, bufferSize int, msg Msg) error {
 		return err
 	}
 
-	var response Msg
+	var response utils.Payload
 	err = json.Unmarshal(buf[:n], &response)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Encrypted Response:\n\t%-10s %s\n\t%-10s %s\n", "Content:", response.Content, "Key:", response.Key)
+	fmt.Printf("Encrypted Response:\n\t%-10s %s\n\t%-10s %s\n", "Message:", response.Message, "Key:", response.Key)
 
-	decoded := Process(response, "decipher")
+	decoded := vigenere.Process(response.Message, response.Key, vigenere.Decipher)
 
 	fmt.Println("Decrypted Message:", decoded)
 

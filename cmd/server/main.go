@@ -4,27 +4,29 @@ import (
 	"log"
 	"time"
 
-	"vigenere-cipher/internal"
+	"vigenere-cipher/internal/socket"
+	"vigenere-cipher/internal/utils"
 )
 
 func main() {
-	cfg, err := internal.LoadConfig()
+	cfg, err := utils.LoadConfig()
 	if err != nil {
 		log.Fatalln("Error loading Config:", err)
 	}
 
-	addr := internal.ServerParseArgs(cfg)
+	var sock socket.SockAddr
+	sock.Addr = utils.ServerParseArgs(cfg)
 
-	fd, err := addr.ServerSetup()
+	fd, err := sock.ServerSetup()
 	if err != nil {
 		log.Fatalln("Error setting up Server:", err)
 	}
 
 	defer fd.Close()
 
-	f := internal.Flag{Exit: false}
+	f := socket.Flag{Exit: false}
 
-	internal.HandleSignal(fd, &f)
+	socket.HandleSignal(fd, &f)
 
 	for !f.Exit {
 		conn, err := fd.AcceptTCP()
@@ -37,6 +39,6 @@ func main() {
 			log.Println("Error accepting connection:", err)
 			break
 		}
-		go internal.HandleConnection(conn, cfg.BufferSize)
+		go socket.HandleConnection(conn, cfg.BufferSize)
 	}
 }

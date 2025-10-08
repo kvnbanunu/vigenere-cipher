@@ -1,4 +1,4 @@
-package internal
+package utils
 
 import (
 	"encoding/json"
@@ -11,14 +11,35 @@ import (
 	"unicode"
 )
 
+type IPType int
+
+const (
+	IPv4  IPType = 4
+	IPv6  IPType = 6
+	BadIP IPType = -1
+)
+
 // Holds settings for defaults
 type Config struct {
 	BufferSize int    `json:"bufferSize"`
-	Content    string `json:"content"`
+	Message    string `json:"message"`
 	Key        string `json:"key"`
 	Type       IPType `json:"ipType"`
 	IP         string `json:"ip"`
 	Port       string `json:"port"`
+}
+
+// Holds network socket settings
+type Addr struct {
+	Type IPType `json:"type"`
+	IP   string `json:"ip"`
+	Port string `json:"port"`
+}
+
+// Holds the message to be ciphered/deciphered w/ key
+type Payload struct {
+	Message string `json:"message"`
+	Key     string `json:"key"`
 }
 
 // Read contents of "config.json" and store in Config struct
@@ -50,10 +71,6 @@ func ServerParseArgs(cfg *Config) *Addr {
 		serverUsage(prog, "")
 	}
 
-	if len(args) > 3 { // Program name, IP, Port
-		serverUsage(prog, "Too many arguments.")
-	}
-
 	var addr Addr
 	cfg.serverHandleArgs(prog, args, &addr)
 
@@ -61,7 +78,7 @@ func ServerParseArgs(cfg *Config) *Addr {
 }
 
 // Parse command line args for client
-func ClientParseArgs(cfg *Config) (*Msg, *Addr) {
+func ClientParseArgs(cfg *Config) (*Payload, *Addr) {
 	prog := os.Args[0]
 
 	var help bool
@@ -73,11 +90,7 @@ func ClientParseArgs(cfg *Config) (*Msg, *Addr) {
 		clientUsage(prog, "")
 	}
 
-	if len(args) > 5 { // Program name, msg, key, IP, Port
-		clientUsage(prog, "Too many arguments.")
-	}
-
-	var msg Msg
+	var msg Payload
 	var addr Addr
 	cfg.clientHandleArgs(prog, args, &msg, &addr)
 
@@ -112,9 +125,9 @@ func (cfg *Config) serverHandleArgs(prog string, args []string, addr *Addr) {
 }
 
 // Check for valid args, strict order
-func (cfg *Config) clientHandleArgs(prog string, args []string, msg *Msg, addr *Addr) {
+func (cfg *Config) clientHandleArgs(prog string, args []string, msg *Payload, addr *Addr) {
 	// insert defaults
-	msg.Content = cfg.Content
+	msg.Message = cfg.Message
 	msg.Key = cfg.Key
 	addr.Type = cfg.Type
 	addr.IP = cfg.IP
@@ -123,7 +136,7 @@ func (cfg *Config) clientHandleArgs(prog string, args []string, msg *Msg, addr *
 	for i, val := range args {
 		switch i {
 		case 0:
-			msg.Content = val
+			msg.Message = val
 		case 1:
 			if checkKey(val) {
 				msg.Key = val
