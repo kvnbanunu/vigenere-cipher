@@ -5,9 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math/rand"
+	"net"
 	"os"
 	"strconv"
-	"strings"
+	"time"
 	"unicode"
 )
 
@@ -26,20 +28,27 @@ type Config struct {
 	Key        string `json:"key"`
 	Type       IPType `json:"ipType"`
 	IP         string `json:"ip"`
-	Port       string `json:"port"`
+	Port       int    `json:"port"`
+	MinDelay   uint   `json:"minDelay"`
+	MaxDelay   uint   `json:"maxDelay"`
 }
 
 // Holds network socket settings
 type Addr struct {
 	Type IPType `json:"type"`
-	IP   string `json:"ip"`
-	Port string `json:"port"`
+	IP   net.IP `json:"ip"`
+	Port int    `json:"port"`
 }
 
 // Holds the message to be ciphered/deciphered w/ key
 type Payload struct {
 	Message string `json:"message"`
 	Key     string `json:"key"`
+}
+
+type Delay struct {
+	Min uint `json:"minDelay"`
+	Max uint `json:"maxDelay"`
 }
 
 // Read contents of "config.json" and store in Config struct
@@ -59,11 +68,17 @@ func LoadConfig() (*Config, error) {
 }
 
 // Parse command line args for server
-func ServerParseArgs(cfg *Config) *Addr {
+func ServerParseArgs(cfg *Config) (*Addr, *Delay) {
 	prog := os.Args[0] // program name
 
 	var help bool
+	var minDelay uint
+	var maxDelay uint
+
 	flag.BoolVar(&help, "h", false, "Prints a help message")
+	flag.UintVar(&minDelay, "m", cfg.MinDelay, "Minimum simulated server processing time")
+	flag.UintVar(&maxDelay, "M", cfg.MaxDelay, "Maximum simulated server processing time")
+
 	flag.Parse()
 	args := flag.Args()
 
@@ -71,10 +86,15 @@ func ServerParseArgs(cfg *Config) *Addr {
 		serverUsage(prog, "")
 	}
 
+	delay := Delay{
+		Min: minDelay,
+		Max: maxDelay,
+	}
+
 	var addr Addr
 	cfg.serverHandleArgs(prog, args, &addr)
 
-	return &addr
+	return &addr, &delay
 }
 
 // Parse command line args for client
@@ -101,23 +121,24 @@ func ClientParseArgs(cfg *Config) (*Payload, *Addr) {
 func (cfg *Config) serverHandleArgs(prog string, args []string, addr *Addr) {
 	// insert defaults
 	addr.Type = cfg.Type
-	addr.IP = cfg.IP
+	addr.IP = net.ParseIP(cfg.IP)
 	addr.Port = cfg.Port
 
 	for i, val := range args {
 		switch i {
 		case 0:
-			ipType := checkIP(val)
+			ipType, ip := checkIP(val)
 			if ipType == BadIP {
 				serverUsage(prog, fmt.Sprintf("Invalid IP Address: %s", val))
 			}
 			addr.Type = ipType
-			addr.IP = val
+			addr.IP = ip
 		case 1:
-			if !checkPort(val) {
+			port := checkPort(val)
+			if port == -1 {
 				serverUsage(prog, fmt.Sprintf("Invalid Port: %s", val))
 			}
-			addr.Port = val
+			addr.Port = port
 		default:
 			serverUsage(prog, "Too many arguments")
 		}
@@ -130,7 +151,7 @@ func (cfg *Config) clientHandleArgs(prog string, args []string, msg *Payload, ad
 	msg.Message = cfg.Message
 	msg.Key = cfg.Key
 	addr.Type = cfg.Type
-	addr.IP = cfg.IP
+	addr.IP = net.ParseIP(cfg.IP)
 	addr.Port = cfg.Port
 
 	for i, val := range args {
@@ -144,21 +165,27 @@ func (cfg *Config) clientHandleArgs(prog string, args []string, msg *Payload, ad
 				clientUsage(prog, fmt.Sprintf("Invalid Key: %s", val))
 			}
 		case 2:
-			ipType := checkIP(val)
+			ipType, ip := checkIP(val)
 			if ipType == BadIP {
 				clientUsage(prog, fmt.Sprintf("Invalid IP Address: %s", val))
 			}
 			addr.Type = ipType
-			addr.IP = val
+			addr.IP = ip
 		case 3:
-			if !checkPort(val) {
+			port := checkPort(val)
+			if port == -1 {
 				clientUsage(prog, fmt.Sprintf("Invalid Port: %s", val))
 			}
-			addr.Port = val
+			addr.Port = port
 		default:
 			clientUsage(prog, "Too many arguments")
 		}
 	}
+}
+
+func (d *Delay) SimulateDelay() {
+	delay := rand.Intn(int(d.Max)-int(d.Min)) + int(d.Min)
+	time.Sleep(time.Duration(delay) * time.Second)
 }
 
 // Checks each character if it is a letter in the alphabet
@@ -172,67 +199,31 @@ func checkKey(str string) bool {
 }
 
 // Checks if the IP is a valid IP4 or IP6 address
-func checkIP(str string) IPType {
-	ip := strings.Split(str, ".")
-
-	// if '.' exists in str then there should be more than 1 element
-	// and an ipv4 addr should have 4 elements ex. 0.0.0.0
-	if len(ip) == 4 {
-		for _, segment := range ip {
-			if len(segment) > 3 {
-				return BadIP
-			}
-
-			num, err := strconv.Atoi(segment)
-			if err != nil {
-				return BadIP
-			}
-
-			if num > 255 {
-				return BadIP
-			}
-		}
-		return IPv4
-	} else {
-		ip6 := strings.Split(str, ":")
-		if len(ip6) >= 3 { // shortest representation is "::" is still 3 elements
-			for _, segment := range ip6 {
-				if segment == "" { // represents a compressed 0 segment
-					continue
-				}
-
-				if len(segment) > 4 { // each segment has a max length of 4 hex digits
-					return BadIP
-				}
-
-				num, err := strconv.ParseUint(segment, 16, 64)
-				if err != nil {
-					return BadIP
-				}
-
-				if num > 65535 { // max int value for FFFF
-					return BadIP
-				}
-			}
-			return IPv6
-		}
+// return the IPType (ipv4 or ipv6) and byte representation
+func checkIP(str string) (IPType, net.IP) {
+	ip := net.ParseIP(str)
+	switch len(ip) {
+	case 4:
+		return IPv4, ip
+	case 16:
+		return IPv6, ip
+	default:
+		return BadIP, nil
 	}
-
-	return BadIP
 }
 
-// Checks if the port is valid
-func checkPort(str string) bool {
+// Checks if the port is valid and returns the port
+func checkPort(str string) int {
 	port, err := strconv.Atoi(str)
 	if err != nil {
-		return false
+		return -1
 	}
 
 	if port < 0 || port > 65535 { // max port value
-		return false
+		return -1
 	}
 
-	return true
+	return port
 }
 
 func serverUsage(prog_name string, msg string) {
@@ -240,9 +231,11 @@ func serverUsage(prog_name string, msg string) {
 		log.Println(msg)
 	}
 
-	str := `Usage: %s [-h] <ip address> <port>
+	str := `Usage: %s [-h] [-m] [-M] <ip address> <port>
 Options:
 	-h           Display this help message
+	-m 			 Minimum simulated server processing time
+	-M   		 Maximum simulated server processing time
 	<ip address> IPv4 or IPv6 address of host
 	<port>       Port to listen on
 `
