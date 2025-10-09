@@ -27,12 +27,14 @@ type Flag struct {
 }
 
 func serverSetup(addr *utils.Addr) (int, error) {
-	addrFam := syscall.AF_INET
-	if addr.Type == utils.IPv6 {
-		addrFam = syscall.AF_INET6
-	}
+	var fd int
+	var err error
 
-	fd, err := syscall.Socket(addrFam, syscall.SOCK_STREAM, 0)
+	if addr.Type == utils.IPv4 {
+		fd, err = syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, 0)
+	} else {
+		fd, err = syscall.Socket(syscall.AF_INET6, syscall.SOCK_STREAM, 0)
+	}
 	if err != nil {
 		return 0, fmt.Errorf("Error: socket creation failed: %w", err)
 	}
@@ -53,12 +55,12 @@ func serverSetup(addr *utils.Addr) (int, error) {
 	if addr.Type == utils.IPv4 {
 		sockaddr = &syscall.SockaddrInet4{
 			Port: addr.Port,
-			Addr: [4]byte(addr.IP),
+			Addr: [4]byte(addr.IP.To4()),
 		}
 	} else {
 		sockaddr = &syscall.SockaddrInet6{
 			Port: addr.Port,
-			Addr: [16]byte(addr.IP),
+			Addr: [16]byte(addr.IP.To16()),
 		}
 	}
 
@@ -72,7 +74,7 @@ func serverSetup(addr *utils.Addr) (int, error) {
 		return 0, fmt.Errorf("Error: listen failed: %w", err)
 	}
 
-	fmt.Println("Now listening on %s:%d", addr.IP.String(), addr.Port)
+	fmt.Printf("Now listening on %s:%d\n", addr.IP.String(), addr.Port)
 	return fd, nil
 }
 
@@ -132,7 +134,7 @@ func (s *Server) acceptConnection() error {
 	}
 
 	// wrap the fd into a net Conn
-	file := syscall.NewFile(uintptr(nfd), "client")
+	file := os.NewFile(uintptr(nfd), "client")
 	conn, err := net.FileConn(file)
 	file.Close()
 	if err != nil {
@@ -156,26 +158,25 @@ func (s *Server) acceptConnection() error {
 
 func (s *Server) handleClient(fd, bufferSize int, delay *utils.Delay) error {
 	fmt.Println("Now serving Client fd:", fd)
-	req, err := receive(nil, fd, bufferSize)
-	if err != nil {
-		if errors.Is(err, syscall.EAGAIN) || errors.Is(err, syscall.EWOULDBLOCK) {
-			return nil
+	for {
+		req, err := receive(nil, fd, bufferSize)
+		if err != nil {
+			if errors.Is(err, syscall.EAGAIN) || errors.Is(err, syscall.EWOULDBLOCK) {
+				return nil
+			}
+			return err
 		}
-		return err
+		fmt.Printf("(Client fd: %d)Received Payload:\n\t%-10s %s\n\t%-10s %s\n", fd, "Message:", req.Message, "Key:", req.Key)
+
+		delay.SimulateDelay()
+		encrypted := vigenere.Process(req.Message, req.Key, vigenere.Cipher)
+		fmt.Printf("(Client fd: %d)Sending Encrypted Message: %s\n", fd, encrypted)
+
+		res := utils.Payload{Message: encrypted, Key: req.Key}
+		if err := send(nil, fd, &res); err != nil {
+			return err
+		}
 	}
-	fmt.Printf("(Client fd: %d)Received Payload:\n\t%-10s %s\n\t%-10s %s\n", fd, "Message:", req.Message, "Key:", req.Key)
-
-	delay.SimulateDelay()
-	encrypted := vigenere.Process(req.Message, req.Key, vigenere.Cipher)
-	fmt.Printf("(Client fd: %d)Sending Encrypted Message: %s\n", fd, encrypted)
-
-	res := utils.Payload{Message: encrypted, Key: req.Key}
-	if err := send(nil, fd, &res); err != nil {
-		return err
-	}
-
-	fmt.Printf("(Client fd: %d)Connection Closed.\n", fd)
-	return nil
 }
 
 func (s *Server) closeConnection(fd int) {
@@ -208,7 +209,7 @@ func (s *Server) Run(bufferSize int, delay *utils.Delay) error {
 			return fmt.Errorf("Error: epoll_wait faied: %w", err)
 		}
 
-		for i := 0; i < n; i++ {
+		for i := range n {
 			fd := int(events[i].Fd)
 
 			if fd == s.listener { // new connection
