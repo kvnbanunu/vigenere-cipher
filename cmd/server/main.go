@@ -14,10 +14,9 @@ func main() {
 		log.Fatalln("Error loading Config:", err)
 	}
 
-	var sock socket.SockAddr
-	sock.Addr = utils.ServerParseArgs(cfg)
+	addr := utils.ServerParseArgs(cfg)
 
-	fd, err := sock.ServerSetup()
+	fd, err := socket.ServerSetup(addr)
 	if err != nil {
 		log.Fatalln("Error setting up Server:", err)
 	}

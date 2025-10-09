@@ -13,23 +13,19 @@ import (
 	"vigenere-cipher/internal/vigenere"
 )
 
-type SockAddr struct {
-	Addr *utils.Addr
-}
-
 type Flag struct {
 	Exit bool
 }
 
-func (a *SockAddr) ServerSetup() (*net.TCPListener, error) {
-	addrStr := a.Addr.IP + ":" + a.Addr.Port
+func ServerSetup(addr *utils.Addr) (*net.TCPListener, error) {
+	addrStr := addr.IP + ":" + addr.Port
 
-	addr, err := net.ResolveTCPAddr("tcp", addrStr)
+	sock, err := net.ResolveTCPAddr("tcp", addrStr)
 	if err != nil {
 		return nil, err
 	}
 
-	fd, err := net.ListenTCP("tcp", addr)
+	fd, err := net.ListenTCP("tcp", sock)
 	if err != nil {
 		return nil, err
 	}
@@ -39,15 +35,15 @@ func (a *SockAddr) ServerSetup() (*net.TCPListener, error) {
 	return fd, nil
 }
 
-func (a *SockAddr) ClientSetup() (*net.TCPConn, error) {
-	addrStr := a.Addr.IP + ":" + a.Addr.Port
+func ClientSetup(addr *utils.Addr) (*net.TCPConn, error) {
+	addrStr := addr.IP + ":" + addr.Port
 
-	addr, err := net.ResolveTCPAddr("tcp", addrStr)
+	sock, err := net.ResolveTCPAddr("tcp", addrStr)
 	if err != nil {
 		return nil, err
 	}
 
-	conn, err := net.DialTCP("tcp", nil, addr)
+	conn, err := net.DialTCP("tcp", nil, sock)
 	if err != nil {
 		return nil, err
 	}

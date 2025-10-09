@@ -13,19 +13,16 @@ func main() {
 		log.Fatalln("Error loading Config:", err)
 	}
 
-	msg, addr := utils.ClientParseArgs(cfg)
+	payload, addr := utils.ClientParseArgs(cfg)
 
-	var sock socket.SockAddr
-	sock.Addr = addr
-
-	conn, err := sock.ClientSetup()
+	conn, err := socket.ClientSetup(addr)
 	if err != nil {
 		log.Fatalln("Error connecting to Server:", err)
 	}
 
 	defer conn.Close()
 
-	err = socket.Request(conn, cfg.BufferSize, *msg)
+	err = socket.Request(conn, cfg.BufferSize, *payload)
 	if err != nil {
 		log.Fatalln("Error sending request:", err)
 	}
