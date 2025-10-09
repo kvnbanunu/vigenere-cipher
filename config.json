@@ -2,7 +2,6 @@
   "bufferSize": 1024,
   "message": "Hello, World!",
   "key": "PASSWORD",
-  "type": 4,
   "ip": "127.0.0.1",
   "port": 9876,
   "minDelay": 5,

@@ -13,31 +13,21 @@ import (
 	"unicode"
 )
 
-type IPType int
-
-const (
-	IPv4  IPType = 4
-	IPv6  IPType = 6
-	BadIP IPType = -1
-)
-
 // Holds settings for defaults
 type Config struct {
 	BufferSize int    `json:"bufferSize"`
 	Message    string `json:"message"`
 	Key        string `json:"key"`
-	Type       IPType `json:"ipType"`
 	IP         string `json:"ip"`
-	Port       int    `json:"port"`
+	Port       string `json:"port"`
 	MinDelay   uint   `json:"minDelay"`
 	MaxDelay   uint   `json:"maxDelay"`
 }
 
 // Holds network socket settings
 type Addr struct {
-	Type IPType `json:"type"`
-	IP   net.IP `json:"ip"`
-	Port int    `json:"port"`
+	IP   string `json:"ip"`
+	Port string `json:"port"`
 }
 
 // Holds the message to be ciphered/deciphered w/ key
@@ -120,25 +110,21 @@ func ClientParseArgs(cfg *Config) (*Payload, *Addr) {
 // Checks args for IP address and port, designed to be in any order
 func (cfg *Config) serverHandleArgs(prog string, args []string, addr *Addr) {
 	// insert defaults
-	addr.Type = cfg.Type
-	addr.IP = net.ParseIP(cfg.IP)
+	addr.IP = cfg.IP
 	addr.Port = cfg.Port
 
 	for i, val := range args {
 		switch i {
 		case 0:
-			ipType, ip := checkIP(val)
-			if ipType == BadIP {
+			if !checkIP(val) {
 				serverUsage(prog, fmt.Sprintf("Invalid IP Address: %s", val))
 			}
-			addr.Type = ipType
-			addr.IP = ip
+			addr.IP = val
 		case 1:
-			port := checkPort(val)
-			if port == -1 {
+			if !checkPort(val) {
 				serverUsage(prog, fmt.Sprintf("Invalid Port: %s", val))
 			}
-			addr.Port = port
+			addr.Port = val
 		default:
 			serverUsage(prog, "Too many arguments")
 		}
@@ -150,8 +136,7 @@ func (cfg *Config) clientHandleArgs(prog string, args []string, msg *Payload, ad
 	// insert defaults
 	msg.Message = cfg.Message
 	msg.Key = cfg.Key
-	addr.Type = cfg.Type
-	addr.IP = net.ParseIP(cfg.IP)
+	addr.IP = cfg.IP
 	addr.Port = cfg.Port
 
 	for i, val := range args {
@@ -165,18 +150,15 @@ func (cfg *Config) clientHandleArgs(prog string, args []string, msg *Payload, ad
 				clientUsage(prog, fmt.Sprintf("Invalid Key: %s", val))
 			}
 		case 2:
-			ipType, ip := checkIP(val)
-			if ipType == BadIP {
+			if !checkIP(val) {
 				clientUsage(prog, fmt.Sprintf("Invalid IP Address: %s", val))
 			}
-			addr.Type = ipType
-			addr.IP = ip
+			addr.IP = val
 		case 3:
-			port := checkPort(val)
-			if port == -1 {
+			if !checkPort(val) {
 				clientUsage(prog, fmt.Sprintf("Invalid Port: %s", val))
 			}
-			addr.Port = port
+			addr.Port = val
 		default:
 			clientUsage(prog, "Too many arguments")
 		}
@@ -199,31 +181,26 @@ func checkKey(str string) bool {
 }
 
 // Checks if the IP is a valid IP4 or IP6 address
-// return the IPType (ipv4 or ipv6) and byte representation
-func checkIP(str string) (IPType, net.IP) {
+func checkIP(str string) bool {
 	ip := net.ParseIP(str)
-	switch len(ip) {
-	case 4:
-		return IPv4, ip
-	case 16:
-		return IPv6, ip
-	default:
-		return BadIP, nil
+	if ip == nil {
+		return false
 	}
+	return true
 }
 
 // Checks if the port is valid and returns the port
-func checkPort(str string) int {
+func checkPort(str string) bool {
 	port, err := strconv.Atoi(str)
 	if err != nil {
-		return -1
+		return false
 	}
 
 	if port < 0 || port > 65535 { // max port value
-		return -1
+		return false
 	}
 
-	return port
+	return true
 }
 
 func serverUsage(prog_name string, msg string) {
