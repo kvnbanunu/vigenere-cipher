@@ -22,7 +22,7 @@ func main() {
 
 	defer conn.Close()
 
-	err = socket.Request(conn, cfg.BufferSize, *payload)
+	err = socket.SendRequest(conn, cfg.BufferSize, *payload)
 	if err != nil {
 		log.Fatalln("Error sending request:", err)
 	}

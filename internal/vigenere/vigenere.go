@@ -3,6 +3,7 @@ package vigenere
 import (
 	"log"
 	"unicode"
+	"vigenere-cipher/internal/utils"
 )
 
 type VigenereTask int
@@ -52,7 +53,7 @@ func decipher(c rune, shift rune) string {
 	return string(c)
 }
 
-func Process(msg, key string, task VigenereTask) string {
+func Process(msg, key string, task VigenereTask, delay *utils.Delay) string {
 	// Keep appending the key to itself until it is at least the length of the content
 	for len(key) < len(msg) {
 		key += key
@@ -76,6 +77,10 @@ func Process(msg, key string, task VigenereTask) string {
 			log.Fatalf("Invalid task: %v", task)
 		}
 		keyIndex++
+	}
+
+	if delay != nil {
+		delay.SimulateDelay()
 	}
 	return output
 }

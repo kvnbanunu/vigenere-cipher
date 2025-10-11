@@ -15,14 +15,17 @@ func main() {
 
 	addr, delay := utils.ServerParseArgs(cfg)
 
-	server, err := socket.NewServer(addr)
+	server, err := socket.ServerSetup(addr)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln("Error setting up Server:", err)
 	}
 
+	// cleanup will always happen when main returns
 	defer server.Cleanup()
 
+	socket.HandleSignal(server)
+
 	if err := server.Run(cfg.BufferSize, delay); err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 }
