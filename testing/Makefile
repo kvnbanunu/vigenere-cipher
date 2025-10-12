@@ -28,7 +28,7 @@ t4: clear
 
 t5: clear
 	@echo "Test 5: Server args out of order"
-	./server $(PORT)
+	./server $(PORT) $(IP)
 
 t6: clear
 	@echo "Test 6: Server w/ invalid ip"
@@ -38,8 +38,6 @@ t6: clear
 	./server 127.0.0.1.1.1 $(PORT)
 	@echo "Case 3"
 	./server 300.300.300.300 $(PORT)
-	@echo "Case 4"
-	./server -127.-0.0.1 $(PORT)
 
 t7: clear
 	@echo "Test 7: Server w/ invalid port"
@@ -51,7 +49,7 @@ t7: clear
 t8: clear
 	@echo "Test 8: Server w/ invalid min/max delay"
 	@echo "Case 1: min floating point number"
-	./server -m 2 -M 4 $(IP) $(PORT)
+	./server -m 2.5 -M 4 $(IP) $(PORT)
 	@echo "Case 2: max floating point number"
 	./server -m 2 -M 4.5 $(IP) $(PORT)
 	

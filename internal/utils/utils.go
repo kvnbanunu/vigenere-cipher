@@ -76,6 +76,10 @@ func ServerParseArgs(cfg *Config) (*Addr, *Delay) {
 		serverUsage(prog, "")
 	}
 
+	if maxDelay == minDelay {
+		maxDelay++
+	}
+
 	delay := Delay{
 		Min: minDelay,
 		Max: maxDelay,
@@ -211,8 +215,8 @@ func serverUsage(prog_name string, msg string) {
 	str := `Usage: %s [-h] [-m] [-M] <ip address> <port>
 Options:
 	-h           Display this help message
-	-m 			 Minimum simulated server processing time
-	-M   		 Maximum simulated server processing time
+	-m           Minimum simulated server processing time
+	-M           Maximum simulated server processing time
 	<ip address> IPv4 or IPv6 address of host
 	<port>       Port to listen on
 `

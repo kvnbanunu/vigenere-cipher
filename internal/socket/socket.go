@@ -159,7 +159,7 @@ func (s *Server) handleOutput(fd int32) {
 	}
 
 	fmt.Printf(`	Closing Client #%d connection
-	`, clientID)
+`, clientID)
 	s.updateEvents(fd, unix.POLLIN)
 	s.removeClient(fd)
 }
@@ -189,7 +189,6 @@ func (s *Server) Cleanup() {
 		unix.Close(fd)
 	}
 	unix.Close(s.Host)
-	fmt.Println("Cleanup Success. Server shutting down.")
 }
 
 func ClientSetup(addr *utils.Addr) (*net.TCPConn, error) {
@@ -216,6 +215,7 @@ func HandleSignal(server *Server) {
 		fmt.Println("") // new line after Ctrl-C
 		log.Println("Received SIGTERM. Start cleanup.")
 		server.Cleanup()
+		fmt.Println("Cleanup Success. Server shutting down.")
 		os.Exit(0)
 	}()
 }
