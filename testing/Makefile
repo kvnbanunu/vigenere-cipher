@@ -4,6 +4,8 @@ KEY = PASSWORD
 KEY2 = oculorhinolaryngology
 IP = 127.0.0.1
 PORT = 9876
+MIN_DELAY = -m 2
+MAX_DELAY = -M 4
 
 server: clear
 	./server $(IP) $(PORT)
@@ -18,14 +20,14 @@ t2: clear
 
 t3: clear
 	@echo "Test 3: Server w/ standard args"
-	./server $(IP) $(PORT)
+	./server $(MIN_DELAY) $(MAX_DELAY) $(IP) $(PORT)
 
 t4: clear
-	@echo "Test 4: Server only ip"
+	@echo "Test 4: Server not enough args"
 	./server $(IP)
 
 t5: clear
-	@echo "Test 5: Server only port"
+	@echo "Test 5: Server args out of order"
 	./server $(PORT)
 
 t6: clear
@@ -45,32 +47,50 @@ t7: clear
 	./server $(IP) -1
 	@echo "Case 2: Over max range"
 	./server $(IP) 99999
-	
+
 t8: clear
-	@echo "Test 8: Server w/ extra args"
+	@echo "Test 8: Server w/ invalid min/max delay"
+	@echo "Case 1: min floating point number"
+	./server -m 2 -M 4 $(IP) $(PORT)
+	@echo "Case 2: max floating point number"
+	./server -m 2 -M 4.5 $(IP) $(PORT)
+	
+t9: clear
+	@echo "Test 9: Server w/ extra args"
 	./server $(IP) $(PORT) extra args
 
-t9: clear
-	@echo "Test 9: Server graceful shutdown"
+t10: clear
+	@echo "Test 10: Server graceful shutdown"
 	./server
 
-t10: clear
-	@echo "Test 10: Client w/ no args"
-	./client
-
 t11: clear
-	@echo "Test 11: Client -h"
-	./client -h
+	@echo "Test 11: Server handle multiple clients"
+	./server
 
-t12: clear
-	@echo "Test 12: Client w/ standard args MSG KEY IP PORT"
+t11client: clear
+	@echo "Test 11: Server handle multiple clients"
 	@echo "Set 1"
 	./client $(MSG) $(KEY) $(IP) $(PORT)
 	@echo "Set 2"
 	./client $(MSG2) $(KEY2) $(IP) $(PORT)
 
+t12: clear
+	@echo "Test 12: Client w/ no args"
+	./client
+
 t13: clear
-	@echo "Test 13: Client w/ not enough args"
+	@echo "Test 13: Client -h"
+	./client -h
+
+t14: clear
+	@echo "Test 14: Client w/ standard args MSG KEY IP PORT"
+	@echo "Set 1"
+	./client $(MSG) $(KEY) $(IP) $(PORT)
+	@echo "Set 2"
+	./client $(MSG2) $(KEY2) $(IP) $(PORT)
+
+t15: clear
+	@echo "Test 15: Client w/ not enough args"
 	@echo "Case 1: Only MSG"
 	./client $(MSG)
 	@echo ""
@@ -80,43 +100,43 @@ t13: clear
 	@echo "Case 3: MSG, KEY, and IP (missing PORT)"
 	./client $(MSG) $(KEY) $(IP)
 	
-t14: clear
-	@echo "Test 14: Client args out of order"
+t16: clear
+	@echo "Test 16: Client args out of order"
 	@echo "Case: IP PORT MSG KEY"
 	./client $(IP) $(PORT) $(MSG) $(KEY)
 
-t15: clear
-	@echo "Test 15: Client w/ special characters in MSG"
+t17: clear
+	@echo "Test 17: Client w/ special characters in MSG"
 	@echo "Case 1"
 	./client 'Hello, World! !@#\$%' $(KEY) $(IP) $(PORT)
 	@echo ""
 	@echo "Case 2: Only special characters"
 	./client '!@#\$%^&*()' $(KEY) $(IP) $(PORT)
 
-t16: clear
-	@echo "Test 16: Client w/ numbers in MSG"
+t18: clear
+	@echo "Test 18: Client w/ numbers in MSG"
 	@echo "Case 1"
 	./client 'Hello, World! 12345' $(KEY) $(IP) $(PORT)
 	@echo ""
 	@echo "Case 2: Only numbers"
 	./client '123456789' $(KEY) $(IP) $(PORT)
 
-t17: clear
-	@echo "Test 17: Client w/ special characters in KEY"
+t19: clear
+	@echo "Test 19: Client w/ special characters in KEY"
 	@echo "Case 1"
 	./client $(MSG) 'PASSWORD!@#\$%' $(IP) $(PORT)
 	@echo "Case 2: Only special characters"
 	./client $(MSG) '!@#\$%^&*()' $(IP) $(PORT)
 
-t18: clear
-	@echo "Test 18: Client w/ numbers in KEY"
+t20: clear
+	@echo "Test 20: Client w/ numbers in KEY"
 	@echo "Case 1"
 	./client $(MSG) PASSWORD12345 $(IP) $(PORT)
 	@echo "Case 2: Only numbers in KEY"
 	./client $(MSG) 123456789 $(IP) $(PORT)
 
-t19: clear
-	@echo "Test 19: Client w/ invalid IP"
+t21: clear
+	@echo "Test 21: Client w/ invalid IP"
 	@echo "Case 1"
 	./client $(MSG) $(KEY) 127.0.0.1.1 $(PORT)
 	@echo "Case 2"
@@ -124,19 +144,19 @@ t19: clear
 	@echo "Case 3"
 	./client $(MSG) $(KEY) 300.0.0.1 $(PORT)
 
-t20: clear
-	@echo "Test 20: Client w/ invalid PORT"
+t22: clear
+	@echo "Test 22: Client w/ invalid PORT"
 	@echo "Case 1: Negative"
 	./client $(MSG) $(KEY) $(IP) -1
 	@echo "Case 2: Over max range"
 	./client $(MSG) $(KEY) $(IP) 99999
 
-t21: clear
-	@echo "Test 21: Client w/ too many arg"
+t23: clear
+	@echo "Test 23: Client w/ too many arg"
 	./client $(MSG) $(KEY) $(IP) $(PORT) extra args
 
-t22: clear
-	@echo "Test 22: Client run without Server online"
+t24: clear
+	@echo "Test 24: Client run without Server online"
 	./client
 
 clear:
