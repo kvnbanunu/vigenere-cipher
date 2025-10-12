@@ -28,7 +28,7 @@ git clone https://github.com/kvnbanunu/vigenere-cipher
 ```
 2. Build using make
 ```sh
-make build-all
+make all
 ```
 
 or
