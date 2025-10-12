@@ -8,7 +8,16 @@ The server then responds with the Vigenere cipher applied to the message.
 
 Case is kept and special characters are ignored
 
-An implementation using epoll instead of goroutines can be found in the epoll branch.
+An implementation using unix/poll instead of goroutines can be found in the poll branch.
+
+---
+
+## Documentation
+
+- [Report](https://docs.google.com/document/d/15xV68qSvixCz2s8RQ1sl45qYCVEp8EKn44WCFvks-yw/edit?usp=sharing)
+- [Design](https://docs.google.com/document/d/1x46j0lcG7gW9fJnlh05_8QkOuPn3czukDmzGE5s0viI/edit?usp=sharing)
+- [Testing](https://docs.google.com/document/d/16pJZiiumTTa6wIAP72YOGGeo_ObMEwFeud5ixIHRGL8/edit?usp=sharing)
+- [User Guide](https://docs.google.com/document/d/1dRS5msokagdu6wfYJiStrQ9i3K54nHJVo-2OOxWS1SM/edit?usp=sharing)
 
 ---
 
