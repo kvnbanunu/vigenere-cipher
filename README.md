@@ -1,4 +1,4 @@
-# Vigenere Cipher over Network Sockets
+# Vigenere Cipher over Network Sockets Using unix/Poll
 
 This is a client-server application that uses network sockets for communication.
 
@@ -6,9 +6,18 @@ The client can send a message along with a key to the server.
 
 The server then responds with the Vigenere cipher applied to the message.
 
+The server uses poll I/O multiplexing to handle multiple clients simultaneously using non-blocking sockets.
+
 Case is kept and special characters are ignored
 
-An implementation using epoll instead of goroutines can be found in the epoll branch.
+---
+
+## Documentation
+
+- [Report](https://docs.google.com/document/d/18tYNNx9JMgE36kiNzezSjHwHbx5fJFT2pNBpwgPR-9k/edit?usp=sharing)
+- [Design](https://docs.google.com/document/d/19fyqHLXSmxH9DxdSRIize00927NJ7ldFkJD3whLPzIo/edit?usp=sharing)
+- [Testing](https://docs.google.com/document/d/1Fp8C9UWEor-GJ4R4vqPgUbWDsr6Ov4zFfedaM-ei9hA/edit?usp=sharing)
+- [User Guide](https://docs.google.com/document/d/1Yl3DrByjoG5A-VMoqsj-GK-t_GTxmBjxCi8UpyvDQ0E/edit?usp=sharing)
 
 ---
 
@@ -19,7 +28,7 @@ git clone https://github.com/kvnbanunu/vigenere-cipher
 ```
 2. Build using make
 ```sh
-make build-all
+make all
 ```
 
 or
@@ -38,6 +47,8 @@ cp config.json bin/
 1. Start Server
 ```sh
 ./bin/server <host ip> <port>
+
+Optionally set a delay with -m <min> -M <max>
 ```
 2. Send request with Client
 ```sh
@@ -52,9 +63,10 @@ Both programs can also be run without arguments with the following config file
 ## Config
 config.json includes two fields that can be changed (You do not need to rebuild)
 
-- bufferSize sets the size of the buffer for read/write
+- bufferSize (int) sets the size of the buffer for read/write
 - content sets the default message
 - key sets the default encryption key
 - ip sets the default host ip address
 - port sets the default port
-
+- minDelay (int) sets the Minimum simulated server processing time
+- maxDelay (int) sets the Maximum simulated server processing time
