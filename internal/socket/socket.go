@@ -18,7 +18,6 @@ import (
 type Request struct {
 	Id      int
 	Payload *utils.Payload
-	Mode    int16
 }
 
 type Server struct {
@@ -67,7 +66,7 @@ func ServerSetup(addr *utils.Addr) (*Server, error) {
 
 func (s *Server) Run(bufferSize int, delay *utils.Delay) error {
 	for !s.ExitFlag {
-		n, err := unix.Poll(s.Fds, -1)
+		n, err := unix.Poll(s.Fds, 0)
 		if err != nil {
 			if err == syscall.EINTR {
 				continue
@@ -83,22 +82,21 @@ func (s *Server) Run(bufferSize int, delay *utils.Delay) error {
 			revents := val.Revents
 
 			// new connection
-			if fd == int32(s.Host) && (revents&unix.POLLIN != 0) {
+			switch {
+			case fd == int32(s.Host) && (revents&unix.POLLIN != 0):
 				err := s.addConnection()
 				if err != nil {
 					return fmt.Errorf("Error adding connection: %w", err)
 				}
-			}
-			if revents&unix.POLLIN != 0 {
-				// s.handleConnection(fd, bufferSize, delay)
+			case revents&unix.POLLIN != 0:
 				err := s.handleInput(fd, bufferSize)
 				if err != nil {
 					s.removeClient(fd)
 				}
+			case revents&unix.POLLOUT != 0:
+				s.handleOutput(fd)
 			}
-			if revents&unix.POLLOUT != 0 {
-				s.handleOutput(fd, delay)
-			}
+			delay.SimulateDelay()
 		}
 	}
 	return nil
@@ -114,65 +112,44 @@ func (s *Server) addConnection() error {
 	}
 	unix.SetNonblock(client, true)
 	addr := sockaddr.(*unix.SockaddrInet4)
-	s.Requests[int32(client)] = Request{Id: s.ConnCount, Mode: unix.POLLIN}
+	s.Requests[int32(client)] = Request{Id: s.ConnCount, Payload: &utils.Payload{}}
 	ip := net.IPv4(addr.Addr[0], addr.Addr[1], addr.Addr[2], addr.Addr[3])
-	fmt.Printf("Accepted connection from %s:%d (Client #%d)\n", ip.String(), addr.Port, s.ConnCount)
+	fmt.Printf(`
+[Client #%d]
+	Accepted connection from %s:%d
+`, s.ConnCount, ip.String(), addr.Port)
 	s.ConnCount++
 	s.Fds = append(s.Fds, unix.PollFd{Fd: int32(client), Events: unix.POLLIN})
 	return nil
 }
 
-func (s *Server) handleConnection(fd int32, bufferSize int, delay *utils.Delay) {
-	defer s.removeClient(fd)
-
-	clientID := s.Requests[fd].Id
-	fmt.Printf("Now serving Client #%d\n", clientID)
-
-	req, err := receive(nil, int(fd), bufferSize)
-	if err != nil {
-		log.Println("Error receiving request:", err)
-		return
-	}
-
-	fmt.Printf("Received from Client #%d: %s\n", clientID, req.Message)
-
-	encrypted := vigenere.Process(req.Message, req.Key, vigenere.Cipher, delay)
-
-	fmt.Printf("Sending encrypted message: %s\n", encrypted)
-
-	req.Message = encrypted
-	err = send(nil, int(fd), req)
-	if err != nil {
-		log.Println("Error sending response:", err)
-		// closing connection anyways don't return
-	}
-
-	fmt.Printf("Closing Client #%d connection\n", clientID)
-}
-
 func (s *Server) handleInput(fd int32, bufferSize int) error {
 	clientID := s.Requests[fd].Id
-	fmt.Printf("Now serving Client #%d\n", clientID)
 
 	req, err := receive(nil, int(fd), bufferSize)
 	if err != nil {
 		return fmt.Errorf("Error receiving request: %w", err)
 	}
 
-	fmt.Printf("Received from Client #%d: %s\n", clientID, req.Message)
+	fmt.Printf("\n[Client #%d]\n\tPayload Received\n\t%-10s%s\n\t%-10s%s\n",
+		clientID, "Message:", req.Message, "Key:", req.Key)
 
 	// set this client to pollout
 	s.updateEvents(fd, unix.POLLOUT)
-	s.Requests[fd].Payload = req
+	s.Requests[fd].Payload.Message = req.Message
+	s.Requests[fd].Payload.Key = req.Key
 	return nil
 }
 
-func (s *Server) handleOutput(fd int32, delay *utils.Delay) {
+func (s *Server) handleOutput(fd int32) {
 	clientID := s.Requests[fd].Id
 	req := s.Requests[fd].Payload
-	encrypted := vigenere.Process(req.Message, req.Key, vigenere.Cipher, delay)
+	encrypted := vigenere.Process(req.Message, req.Key, vigenere.Cipher)
 
-	fmt.Printf("Sending encrypted message: %s\n", encrypted)
+	fmt.Printf(`
+[Client #%d]
+	Sending encrypted message: %s
+`, clientID, encrypted)
 
 	req.Message = encrypted
 	err := send(nil, int(fd), req)
@@ -181,16 +158,16 @@ func (s *Server) handleOutput(fd int32, delay *utils.Delay) {
 		// closing connection anyways don't return
 	}
 
-	fmt.Printf("Closing Client #%d connection\n", clientID)
+	fmt.Printf(`	Closing Client #%d connection
+	`, clientID)
 	s.updateEvents(fd, unix.POLLIN)
 	s.removeClient(fd)
 }
 
 func (s *Server) updateEvents(fd int32, events int16) {
-	for _, client := range s.Fds {
-		if client.Fd == fd {
-			client.Events = events
-			s.Requests[fd].Mode = events
+	for i := range s.Fds {
+		if s.Fds[i].Fd == fd {
+			s.Fds[i].Events = events
 		}
 	}
 }
@@ -257,11 +234,11 @@ func SendRequest(conn *net.TCPConn, bufferSize int, req utils.Payload) error {
 		return err
 	}
 
-	fmt.Printf("Encrypted Response:\n\t%-10s %s\n\t%-10s %s\n", "Message:", response.Message, "Key:", response.Key)
+	fmt.Println("Encrypted Response:\t", response.Message)
 
-	decoded := vigenere.Process(response.Message, response.Key, vigenere.Decipher, nil)
+	decoded := vigenere.Process(response.Message, response.Key, vigenere.Decipher)
 
-	fmt.Println("Decrypted Message:", decoded)
+	fmt.Println("Decrypted Message:\t", decoded)
 
 	return nil
 }

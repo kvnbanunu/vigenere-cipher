@@ -4,6 +4,6 @@
   "key": "PASSWORD",
   "ip": "127.0.0.1",
   "port": "9876",
-  "minDelay": 5,
-  "maxDelay": 10
+  "minDelay": 2,
+  "maxDelay": 3
 }
