@@ -148,11 +148,10 @@ func (cfg *Config) clientHandleArgs(prog string, args []string, msg *Payload, ad
 		case 0:
 			msg.Message = val
 		case 1:
-			if checkKey(val) {
-				msg.Key = val
-			} else {
+			if !checkKey(val) {
 				clientUsage(prog, fmt.Sprintf("Invalid Key: %s", val))
 			}
+			msg.Key = val
 		case 2:
 			if !checkIP(val) {
 				clientUsage(prog, fmt.Sprintf("Invalid IP Address: %s", val))
